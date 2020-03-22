@@ -46,8 +46,17 @@ import org.jmrtd.BACKeySpec;
 import org.jmrtd.PassportService;
 import org.jmrtd.lds.COMFile;
 import org.jmrtd.lds.CardAccessFile;
+import org.jmrtd.lds.DG11File;
+import org.jmrtd.lds.DG12File;
+import org.jmrtd.lds.DG14File;
+import org.jmrtd.lds.DG15File;
 import org.jmrtd.lds.DG1File;
 import org.jmrtd.lds.DG2File;
+import org.jmrtd.lds.DG3File;
+import org.jmrtd.lds.DG4File;
+import org.jmrtd.lds.DG5File;
+import org.jmrtd.lds.DG6File;
+import org.jmrtd.lds.DG7File;
 import org.jmrtd.lds.FaceImageInfo;
 import org.jmrtd.lds.FaceInfo;
 import org.jmrtd.lds.LDS;
@@ -86,6 +95,8 @@ public class RNPassportReaderModule extends ReactContextBaseJavaModule implement
   private static final String KEY_ISSUER = "issuer";
   private static final String KEY_NATIONALITY = "nationality";
   private static final String KEY_PHOTO = "photo";
+  private static final String KEY_PROFESSION = "profession";
+  private static final String KEY_PLACE_OF_BIRTH = "placeOfBirth";
   private static final String PARAM_DOC_NUM = "documentNumber";
   private static final String PARAM_DOB = "dateOfBirth";
   private static final String PARAM_DOE = "dateOfExpiry";
@@ -275,6 +286,7 @@ public class RNPassportReaderModule extends ReactContextBaseJavaModule implement
     private SODFile sodFile;
     private DG1File dg1File;
     private DG2File dg2File;
+    private DG11File dg11File;
 
     private Bitmap bitmap;
 
@@ -327,10 +339,12 @@ public class RNPassportReaderModule extends ReactContextBaseJavaModule implement
         lds.add(PassportService.EF_DG1, dg1In, dg1In.getLength());
         dg1File = lds.getDG1File();
 
+        CardFileInputStream dg11In = service.getInputStream(PassportService.EF_DG11);
+        lds.add(PassportService.EF_DG11, dg11In, dg11In.getLength());
+        dg11File = lds.getDG11File();
         CardFileInputStream dg2In = service.getInputStream(PassportService.EF_DG2);
         lds.add(PassportService.EF_DG2, dg2In, dg2In.getLength());
         dg2File = lds.getDG2File();
-
         List<FaceImageInfo> allFaceImageInfos = new ArrayList<>();
         List<FaceInfo> faceInfos = dg2File.getFaceInfos();
         for (FaceInfo faceInfo : faceInfos) {
@@ -371,8 +385,10 @@ public class RNPassportReaderModule extends ReactContextBaseJavaModule implement
         resetState();
         return;
       }
+      WritableMap passport = Arguments.createMap();
+      String[] names = dg11File.getNameOfHolder().split("<<");
+      List<String> list = dg11File.getPlaceOfBirth();
 
-      MRZInfo mrzInfo = dg1File.getMRZInfo();
 
       int quality = 100;
       if (opts.hasKey("quality")) {
@@ -385,16 +401,19 @@ public class RNPassportReaderModule extends ReactContextBaseJavaModule implement
       photo.putInt("width", bitmap.getWidth());
       photo.putInt("height", bitmap.getHeight());
 
-      String firstName = mrzInfo.getSecondaryIdentifier().replace("<", "");
-      String lastName = mrzInfo.getPrimaryIdentifier().replace("<", "");
-      WritableMap passport = Arguments.createMap();
+      MRZInfo mrzInfo = dg1File.getMRZInfo();
+      String firstName = names[1].replace("<", " ");
+      String lastName =  names[0].replace("<", " ");
       passport.putMap(KEY_PHOTO, photo);
       passport.putString(KEY_FIRST_NAME, firstName);
       passport.putString(KEY_LAST_NAME, lastName);
       passport.putString(KEY_NATIONALITY, mrzInfo.getNationality());
       passport.putString(KEY_GENDER, mrzInfo.getGender().toString());
       passport.putString(KEY_ISSUER, mrzInfo.getIssuingState());
-
+      passport.putString(KEY_PROFESSION, dg11File.getProfession());
+      if(list.size() > 0) {
+        passport.putString(KEY_PLACE_OF_BIRTH, list.get(0));
+      }
       scanPromise.resolve(passport);
       resetState();
     }

@@ -155,7 +155,14 @@ public class RNPassportReaderModule extends ReactContextBaseJavaModule implement
     constants.put(KEY_IS_SUPPORTED, hasNFC);
     return constants;
   }
-
+  @ReactMethod
+  public void openNFCSettings() {
+    if (android.os.Build.VERSION.SDK_INT >= 16) {
+      this.reactContext.startActivity(new Intent(android.provider.Settings.ACTION_NFC_SETTINGS));
+    } else {
+      this.reactContext.startActivity(new Intent(android.provider.Settings.ACTION_WIRELESS_SETTINGS));
+    }
+  }
   @ReactMethod
   public void cancel(final Promise promise) {
     if (scanPromise != null) {

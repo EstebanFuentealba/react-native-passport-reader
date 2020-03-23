@@ -1,4 +1,4 @@
-import { NativeModules } from "react-native";
+import { NativeModules, NativeEventEmitter } from "react-native";
 
 const { RNPassportReader } = NativeModules;
 const Emitter = new NativeEventEmitter(RNPassportReader);
